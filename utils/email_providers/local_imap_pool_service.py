@@ -1,7 +1,11 @@
-import imaplib
+﻿import imaplib
 import json
 import re
 import socket
+import time
+from email import message_from_bytes
+from email.header import decode_header
+from html import unescape
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
@@ -33,12 +37,72 @@ class ProxyIMAP4_SSL(imaplib.IMAP4_SSL):
 OTP_CODE_PATTERN = r"(?<!\d)(\d{6})(?!\d)"
 
 
+def _decode_header_value(value: str) -> str:
+    if not value:
+        return ""
+    parts = []
+    for item, charset in decode_header(value):
+        if isinstance(item, bytes):
+            for enc in filter(None, [charset, "utf-8", "latin1"]):
+                try:
+                    parts.append(item.decode(enc, errors="ignore"))
+                    break
+                except Exception:
+                    continue
+        else:
+            parts.append(str(item))
+    return "".join(parts).strip()
+
+
+def _extract_message_text(msg) -> str:
+    parts = []
+    if msg.is_multipart():
+        for part in msg.walk():
+            if part.get_content_maintype() == "multipart":
+                continue
+            ct = (part.get_content_type() or "").lower()
+            if ct not in ("text/plain", "text/html"):
+                continue
+            try:
+                payload = part.get_payload(decode=True)
+                charset = part.get_content_charset() or "utf-8"
+                text = payload.decode(charset, errors="ignore") if payload else ""
+            except Exception:
+                text = str(part.get_payload() or "")
+            if ct == "text/html":
+                text = re.sub(r"<[^>]+>", " ", text)
+            parts.append(text)
+    else:
+        try:
+            payload = msg.get_payload(decode=True)
+            charset = msg.get_content_charset() or "utf-8"
+            text = payload.decode(charset, errors="ignore") if payload else ""
+        except Exception:
+            text = str(msg.get_payload() or "")
+        if "html" in (msg.get_content_type() or "").lower():
+            text = re.sub(r"<[^>]+>", " ", text)
+        parts.append(text)
+    return unescape("\n".join(p for p in parts if p).strip())
+
+
+def _is_openai_otp_mail(sender: str, subject: str, content: str) -> bool:
+    sender_lower = (sender or "").lower()
+    subject_lower = (subject or "").lower()
+    merged = f"{sender}\n{subject}\n{content}".lower()
+    sender_hit = any(k in sender_lower for k in ["openai", "tm.openai.com", "noreply@tm.openai.com"])
+    subject_hit = any(k in subject_lower for k in ["chatgpt", "openai", "login code", "log-in code", "verification code", "temporary"])
+    content_hit = any(k in merged for k in ["chatgpt", "openai", "login code", "log-in code", "verification code"])
+    return sender_hit or subject_hit or content_hit
+
+
 def extract_otp_code(content: str) -> str:
     if not content:
         return ""
     patterns = [
         r"(?i)Your ChatGPT code is\s*(\d{6})",
         r"(?i)ChatGPT code is\s*(\d{6})",
+        r"(?i)ChatGPT Log-?in Code[^\d]*(\d{6})",
+        r"(?i)temporary ChatGPT login code[^\d]*(\d{6})",
         r"(?i)verification code to continue:\s*(\d{6})",
         r"(?i)Subject:.*?(\d{6})",
     ]
@@ -128,18 +192,37 @@ def wait_for_verification_code(mailbox: Dict[str, Any], target_email: str, *, ma
                 conn = create_imap_conn(server, port, proxy_str)
                 conn.login(user, password)
 
-            folders = ["INBOX", "Junk", '"Junk Email"', "Spam", '"[Gmail]/Spam"', '"垃圾邮件"']
+            folders = ["INBOX", "Junk", '"Junk Email"', "Spam", '"[Gmail]/Spam"', "Odebrane", "Inbox"]
             for folder in folders:
                 try:
                     conn.noop()
                     status, _ = conn.select(folder, readonly=True)
                     if status != "OK":
                         continue
-                    status, messages = conn.search(None, '(UNSEEN FROM "openai.com")')
-                    if status != "OK" or not messages or not messages[0]:
+
+                    search_sets = []
+                    status, unseen = conn.search(None, 'UNSEEN')
+                    if status == "OK" and unseen and unseen[0]:
+                        search_sets.append(unseen[0].split())
+
+                    status, all_messages = conn.search(None, 'ALL')
+                    if status == "OK" and all_messages and all_messages[0]:
+                        recent_ids = all_messages[0].split()[-20:]
+                        if recent_ids:
+                            search_sets.append(recent_ids)
+
+                    if not search_sets:
                         continue
 
-                    for mail_id in reversed(messages[0].split()):
+                    candidate_ids = []
+                    seen_ids = set()
+                    for id_batch in search_sets:
+                        for mail_id in id_batch:
+                            if mail_id not in seen_ids:
+                                seen_ids.add(mail_id)
+                                candidate_ids.append(mail_id)
+
+                    for mail_id in reversed(candidate_ids):
                         if mail_id in processed_mail_ids:
                             continue
                         fetch_status, data = conn.fetch(mail_id, "(RFC822)")
@@ -149,30 +232,20 @@ def wait_for_verification_code(mailbox: Dict[str, Any], target_email: str, *, ma
                         for resp_part in data:
                             if not isinstance(resp_part, tuple):
                                 continue
-                            import email as email_lib
-                            msg = email_lib.message_from_bytes(resp_part[1])
-                            subject = str(msg.get("Subject", ""))
-                            content = ""
-                            if msg.is_multipart():
-                                for part in msg.walk():
-                                    if part.get_content_type() == "text/plain":
-                                        try:
-                                            content += part.get_payload(decode=True).decode("utf-8", "ignore")
-                                        except Exception:
-                                            pass
-                            else:
-                                try:
-                                    content = msg.get_payload(decode=True).decode("utf-8", "ignore")
-                                except Exception:
-                                    content = str(msg.get_payload())
 
-                            to_h = str(msg.get("To", "")).lower()
-                            del_h = str(msg.get("Delivered-To", "")).lower()
-                            xo_h = str(msg.get("X-Original-To", "")).lower()
-                            merged = f"{subject}\n{to_h}\n{del_h}\n{xo_h}\n{content}"
-                            if str(target_email or "").lower() not in merged.lower():
+                            msg = message_from_bytes(resp_part[1])
+                            subject = _decode_header_value(str(msg.get("Subject", "")))
+                            sender = _decode_header_value(str(msg.get("From", "")))
+                            content = _extract_message_text(msg)
+                            to_h = _decode_header_value(str(msg.get("To", ""))).lower()
+                            del_h = _decode_header_value(str(msg.get("Delivered-To", ""))).lower()
+                            xo_h = _decode_header_value(str(msg.get("X-Original-To", ""))).lower()
+                            merged = f"{sender}\n{subject}\n{to_h}\n{del_h}\n{xo_h}\n{content}"
+
+                            if not _is_openai_otp_mail(sender, subject, merged):
                                 processed_mail_ids.add(mail_id)
                                 continue
+
                             code = extract_otp_code(merged)
                             processed_mail_ids.add(mail_id)
                             if code:
@@ -191,7 +264,6 @@ def wait_for_verification_code(mailbox: Dict[str, Any], target_email: str, *, ma
 
         if attempt > 0 and attempt % 3 == 0:
             print(f"[{cfg.ts()}] [INFO] 仍在查询 IMAP号池邮箱({_mask_email(target_email)}) 验证码 ({attempt + 1}/{max_attempts})...")
-        import time
         time.sleep(max(1, int(getattr(cfg, "LOCAL_IMAP_POOL_FETCH_RETRY_INTERVAL_SEC", 3) or 3)))
 
     if mailbox_id:
