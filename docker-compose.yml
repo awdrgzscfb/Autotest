@@ -13,6 +13,8 @@ services:
       - HOST_PROJECT_PATH=${PWD}
     volumes:
       - ./data:/app/data
+      - ./index.html:/app/index.html
+      - ./static/js/app.js:/app/static/js/app.js
       - /var/run/docker.sock:/var/run/docker.sock
   watchtower:
     image: containrrr/watchtower
