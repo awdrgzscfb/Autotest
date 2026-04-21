@@ -738,25 +738,26 @@
 <div v-show="currentTab === 'email'" v-if="config" class="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-8">
                             <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-200/60">
                                 <h3 class="text-lg md:text-xl font-black text-blue-600 mb-5 flex items-center gap-2 tracking-tight"><span>📧</span> 基础发信设置</h3>
-                                <label class="block text-slate-700 text-sm font-extrabold mb-2">API 模式选择 (email_api_mode)</label>
+                                <label class="block text-slate-700 text-sm font-extrabold mb-2">API ???? (email_api_mode)</label>
                                 <select v-model="config.email_api_mode" @change="if(!['freemail', 'imap', 'cloudmail', 'cloudflare_temp_email', 'Gmail_OAuth'].includes(config.email_api_mode)) config.enable_sub_domains = false;" class="w-full appearance-none bg-slate-50 border-2 border-slate-200 text-blue-700 font-black rounded-xl py-3 px-4 focus:outline-none focus:ring-0 focus:border-blue-500 transition-colors shadow-sm cursor-pointer pr-10 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%232563eb%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[right_14px_center] bg-no-repeat">
-                                    <option value="cloudflare_temp_email">cloudflare_temp_email (CF 临时邮箱)</option>
-                                    <option value="imap">imap (直连收件箱)</option>
-                                    <option value="icloud_hme">icloud_hme (苹果隐藏邮箱)</option>
-                                    <option value="local_microsoft">本地微软邮箱库</option>
-                                    <option value="gmail_fission">Gmail OAuth裂变</option>
-                                    <option value="Gmail_OAuth">Gmail_OAuth授权(cf转发gmail直接选此模式收件)</option>
+                                    <option value="cloudflare_temp_email">cloudflare_temp_email (CF ????)</option>
+                                    <option value="imap">imap (?????)</option>
+                                    <option value="icloud_hme">icloud_hme (??????)</option>
+                                    <option value="local_imap_pool">local_imap_pool (?? IMAP ??)</option>
+                                    <option value="local_microsoft">local_microsoft (???????)</option>
+                                    <option value="gmail_fission">gmail_fission (Gmail OAuth ??)</option>
+                                    <option value="Gmail_OAuth">Gmail_OAuth (CF ?? Gmail ????)</option>
                                     <option value="freemail">freemail</option>
                                     <option value="cloudmail">cloudmail</option>
                                     <option value="mail_curl">mail_curl</option>
-                                    <option value="luckmail">luckmail (LuckMail 接码)</option>
+                                    <option value="luckmail">luckmail (LuckMail ??)</option>
                                     <option value="tempmail">Tempmail.lol</option>
                                     <option value="tempmail_org">tempmail_org</option>
-                                    <option value="duckmail">duckmail (DuckMail 鸭子邮箱)</option>
+                                    <option value="duckmail">duckmail (DuckMail ????)</option>
                                     <option value="generator_email">generator_email</option>
-                                    <option value="temporam">Temporam.com (需填Cookie)</option>
-                                    <option value="tmailor">Tmailor.com (需填token)</option>
-                                    <option value="fvia">FviaInboxes (需填authorization)</option>
+                                    <option value="temporam">Temporam.com (?? Cookie)</option>
+                                    <option value="tmailor">Tmailor.com (?? Token)</option>
+                                    <option value="fvia">FviaInboxes (?? Authorization)</option>
                                     <option value="inboxes">Inboxes.com</option>
                                     <option value="temporarymail">TemporaryMail.com</option>
                                 </select>
