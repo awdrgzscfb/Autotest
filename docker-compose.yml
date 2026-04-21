@@ -15,6 +15,7 @@ services:
       - ./data:/app/data
       - ./index.html:/app/index.html
       - ./static/js/app.js:/app/static/js/app.js
+      - ./utils/email_providers/local_imap_pool_service.py:/app/utils/email_providers/local_imap_pool_service.py
       - /var/run/docker.sock:/var/run/docker.sock
   watchtower:
     image: containrrr/watchtower
