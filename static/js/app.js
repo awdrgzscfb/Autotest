@@ -1,9 +1,21 @@
 const { createApp } = Vue;
 
+function normalizeBooleanLike(value, defaultValue = false) {
+    if (value === true || value === false) return value;
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+        if (['0', 'false', 'no', 'off', ''].includes(normalized)) return false;
+    }
+    if (typeof value === 'number') return value !== 0;
+    return defaultValue;
+}
+
 createApp({
     data() {
         return {
-            appVersion: 'v11.0.3',
+            appVersion: 'v11.1.6',
+            isDarkMode: localStorage.getItem('ui_theme_mode') === 'dark',
             isLoggedIn: !!localStorage.getItem('auth_token'),
             loginPassword: '',
             currentTab: window.location.hash.replace('#', '') || 'console',
@@ -14,6 +26,7 @@ createApp({
                 { id: 'cluster', name: '集群总控', icon: '🖥️' },
                 { id: 'email', name: '邮箱配置', icon: '📧' },
                 { id: 'mailboxes', name: '微软邮箱库', icon: '📬' },
+                { id: 'imap_pool', name: 'IMAP号池', icon: '📨' },
                 { id: 'accounts', name: '账号库存', icon: '📦' },
                 { id: 'cloud', name: '云端库存', icon: '☁️' },
                 { id: 'sms', name: '手机接码', icon: '📱' },
@@ -57,6 +70,9 @@ createApp({
             config: null,
             blacklistStr: "",
             warpListStr: "",
+            rawProxyListStr: "",
+            hideRegAccounts: false,
+            cloudStatusFilter: 'all',
             accounts: [],
             selectedAccounts: [],
 			currentPage: 1,
@@ -134,6 +150,8 @@ createApp({
             showImportImapPoolModal: false,
             importImapPoolText: '',
             isImportingImapPool: false,
+            imapPoolLoading: false,
+            imapPoolTestingId: null,
             showImapPoolPlaintext: false,
             imapPoolFilters: { status: '', keyword: '' },
             outlookAuth: {
@@ -157,6 +175,7 @@ createApp({
         };
     },
     mounted() {
+        document.body.classList.toggle('theme-dark', this.isDarkMode);
         if (this.isLoggedIn) {
             this.initApp();
         }
@@ -203,6 +222,13 @@ createApp({
         handleConfirm(result) {
             if (this.confirmModal.resolve) this.confirmModal.resolve(result);
             this.confirmModal.show = false;
+        },
+        toggleTheme() {
+            this.isDarkMode = !this.isDarkMode;
+            const nextMode = this.isDarkMode ? 'dark' : 'light';
+            document.body.classList.toggle('theme-dark', this.isDarkMode);
+            localStorage.setItem('ui_theme_mode', nextMode);
+            this.showToast(this.isDarkMode ? '????????' : '????????', 'info');
         },
         async authFetch(url, options = {}) {
             const token = localStorage.getItem('auth_token');
@@ -353,6 +379,16 @@ createApp({
                 if (!this.config.fvia) {
                     this.config.fvia = { token: '' };
                 }
+                if (!this.config.gmail_oauth_mode) {
+                    this.config.gmail_oauth_mode = {
+                        master_email: '',
+                        fission_enable: false,
+                        fission_mode: 'suffix',
+                        suffix_mode: 'fixed',
+                        suffix_len_min: 8,
+                        suffix_len_max: 8
+                    };
+                }
                 if (!this.config.phone_verify) {
                     this.config.phone_verify = { mode: 'hero_sms', manual_timeout_sec: 600 };
                 }
@@ -426,6 +462,8 @@ createApp({
                 }
                 if(this.config.clash_proxy_pool && Array.isArray(this.config.clash_proxy_pool.blacklist)) {
                     this.blacklistStr = this.config.clash_proxy_pool.blacklist.join('\n');
+                } else {
+                    this.blacklistStr = '';
                 }
                 if (this.config.clash_proxy_pool.cluster_count !== undefined) {
                     this.clashPool.count = parseInt(this.config.clash_proxy_pool.cluster_count) || 5;
@@ -435,7 +473,18 @@ createApp({
                 }
                 if(Array.isArray(this.config.warp_proxy_list)) {
                     this.warpListStr = this.config.warp_proxy_list.join('\n');
+                } else {
+                    this.config.warp_proxy_list = [];
+                    this.warpListStr = '';
                 }
+                if (!this.config.raw_proxy_pool || typeof this.config.raw_proxy_pool !== 'object' || Array.isArray(this.config.raw_proxy_pool)) {
+                    this.config.raw_proxy_pool = { enable: false, proxy_list: [] };
+                }
+                this.config.raw_proxy_pool.enable = normalizeBooleanLike(this.config.raw_proxy_pool.enable, false);
+                if (!Array.isArray(this.config.raw_proxy_pool.proxy_list)) {
+                    this.config.raw_proxy_pool.proxy_list = [];
+                }
+                this.rawProxyListStr = this.config.raw_proxy_pool.proxy_list.join('\n');
                 if (this.config.cluster_node_name === undefined) this.config.cluster_node_name = '';
                 if (this.config.cluster_master_url === undefined) this.config.cluster_master_url = '';
                 if (this.config.cluster_secret === undefined) this.config.cluster_secret = 'wenfxl666';
@@ -463,6 +512,11 @@ createApp({
                     this.config.local_microsoft.suffix_len_max = maxLen;
                 }
                 this.config.warp_proxy_list = this.warpListStr.split('\n').map(s => s.trim()).filter(s => s);
+                if (!this.config.raw_proxy_pool || typeof this.config.raw_proxy_pool !== 'object' || Array.isArray(this.config.raw_proxy_pool)) {
+                    this.config.raw_proxy_pool = { enable: false, proxy_list: [] };
+                }
+                this.config.raw_proxy_pool.enable = normalizeBooleanLike(this.config.raw_proxy_pool.enable, false);
+                this.config.raw_proxy_pool.proxy_list = this.rawProxyListStr.split('\n').map(s => s.trim()).filter(s => s);
                 const res = await this.authFetch('/api/config', {
                     method: 'POST', body: JSON.stringify(this.config)
                 });
@@ -558,7 +612,8 @@ createApp({
                 this.currentPage = 1;
             }
             try {
-                const res = await this.authFetch(`/api/accounts?page=${this.currentPage}&page_size=${this.pageSize}`);
+                const hideReg = this.hideRegAccounts ? '&hide_reg=1' : '';
+                const res = await this.authFetch(`/api/accounts?page=${this.currentPage}&page_size=${this.pageSize}${hideReg}`);
                 const data = await res.json();
                 if(data.status === 'success') {
                     this.accounts = data.data ? data.data : data;
@@ -1530,7 +1585,7 @@ createApp({
             }
             const types = this.cloudFilters.join(',');
             try {
-                const res = await this.authFetch(`/api/cloud/accounts?types=${types}&page=${this.cloudPage}&page_size=${this.cloudPageSize}`);
+                const res = await this.authFetch(`/api/cloud/accounts?types=${types}&status_filter=${this.cloudStatusFilter}&page=${this.cloudPage}&page_size=${this.cloudPageSize}`);
                 const data = await res.json();
                 if(data.status === 'success') {
                     this.cloudAccounts = (data.data || []).map(acc => ({
@@ -2003,6 +2058,216 @@ createApp({
                 }
             } catch (e) {
                 this.showToast("请求异常", "error");
+            }
+        },
+        normalizeImapPoolRows(rows = []) {
+            return rows.map(row => {
+                const email = String(row?.email || '').trim();
+                const domain = email.includes('@') ? email.split('@')[1].toLowerCase() : '';
+                const inferredProvider = domain ? domain.split('.').slice(0, -1).join('.') || domain : '';
+                return {
+                    ...row,
+                    provider: row?.provider || inferredProvider || '-',
+                    imap_server: row?.imap_server || '-',
+                    imap_port: row?.imap_port || 993,
+                    status: String(row?.status || 'idle').toLowerCase(),
+                    last_error: row?.last_error || '',
+                };
+            });
+        },
+        async fetchImapPool(isManual = false) {
+            if (isManual) this.imapPoolPage = 1;
+            this.imapPoolLoading = true;
+            try {
+                const status = encodeURIComponent(this.imapPoolFilters?.status || '');
+                const keyword = encodeURIComponent(String(this.imapPoolFilters?.keyword || '').trim());
+                const res = await this.authFetch(`/api/imap-pool?page=${this.imapPoolPage}&page_size=${this.imapPoolPageSize}&status=${status}&keyword=${keyword}`);
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.totalImapPool = Number(data.total || 0);
+                    const totalPages = Math.max(1, Math.ceil(this.totalImapPool / this.imapPoolPageSize));
+                    if (this.imapPoolPage > totalPages && this.totalImapPool > 0) {
+                        this.imapPoolPage = totalPages;
+                        return await this.fetchImapPool(false);
+                    }
+                    this.imapPool = this.normalizeImapPoolRows(data.data || []);
+                    this.selectedImapPool = [];
+                    if (isManual) this.showToast('IMAP ?????', 'success');
+                } else {
+                    this.showToast(data.message || '?? IMAP ????', 'error');
+                }
+            } catch (e) {
+                console.error('?? IMAP ????:', e);
+                this.showToast('?? IMAP ????', 'error');
+            } finally {
+                this.imapPoolLoading = false;
+            }
+        },
+        resetImapPoolFilters() {
+            this.imapPoolFilters = { status: '', keyword: '' };
+            this.imapPoolPage = 1;
+            this.fetchImapPool();
+        },
+        changeImapPoolPage(newPage) {
+            if (newPage < 1 || newPage > this.imapPoolTotalPages || this.imapPoolLoading) return;
+            this.imapPoolPage = newPage;
+            this.fetchImapPool();
+        },
+        changeImapPoolPageSize() {
+            this.imapPoolPage = 1;
+            this.fetchImapPool();
+        },
+        toggleAllImapPool(event) {
+            this.selectedImapPool = event.target.checked ? [...this.imapPool] : [];
+        },
+        async submitImportImapPool() {
+            if (!String(this.importImapPoolText || '').trim()) {
+                this.showToast('??????? IMAP ??', 'warning');
+                return;
+            }
+            this.isImportingImapPool = true;
+            try {
+                const res = await this.authFetch('/api/imap-pool/import', {
+                    method: 'POST',
+                    body: JSON.stringify({ raw_text: this.importImapPoolText })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.showImportImapPoolModal = false;
+                    this.importImapPoolText = '';
+                    this.showToast(data.message || `???? ${data.count || 0} ? IMAP ??`, 'success');
+                    if (Array.isArray(data.errors) && data.errors.length > 0) {
+                        console.warn('IMAP ????:', data.errors);
+                        this.showToast(`? ${data.errors.length} ??????????????`, 'warning');
+                    }
+                    await this.fetchImapPool(true);
+                } else {
+                    const extra = Array.isArray(data.errors) && data.errors.length ? `??? ${data.errors.length} ?` : '';
+                    this.showToast((data.message || '????') + extra, 'error');
+                }
+            } catch (e) {
+                console.error('?? IMAP ????:', e);
+                this.showToast('?? IMAP ??????', 'error');
+            } finally {
+                this.isImportingImapPool = false;
+            }
+        },
+        async setSelectedImapPoolStatus(status) {
+            if (this.selectedImapPool.length === 0) {
+                this.showToast('???? IMAP ??', 'warning');
+                return;
+            }
+            try {
+                const res = await this.authFetch('/api/imap-pool/status', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        ids: this.selectedImapPool.map(item => item.id),
+                        status
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.showToast(data.message || '??????', 'success');
+                    await this.fetchImapPool();
+                } else {
+                    this.showToast(data.message || '??????', 'error');
+                }
+            } catch (e) {
+                console.error('?? IMAP ????:', e);
+                this.showToast('?? IMAP ????', 'error');
+            }
+        },
+        async deleteSelectedImapPool() {
+            if (this.selectedImapPool.length === 0) {
+                this.showToast('???????? IMAP ??', 'warning');
+                return;
+            }
+            const confirmed = await this.customConfirm(`???????? ${this.selectedImapPool.length} ? IMAP ????`);
+            if (!confirmed) return;
+            try {
+                const res = await this.authFetch('/api/imap-pool/delete', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        ids: this.selectedImapPool.map(item => item.id)
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.showToast(data.message || '????', 'success');
+                    await this.fetchImapPool();
+                } else {
+                    this.showToast(data.message || '????', 'error');
+                }
+            } catch (e) {
+                console.error('?? IMAP ????:', e);
+                this.showToast('?? IMAP ????', 'error');
+            }
+        },
+        async testImapPoolRow(row) {
+            if (!row || !row.id) {
+                this.showToast('??? IMAP ??', 'warning');
+                return;
+            }
+            this.imapPoolTestingId = row.id;
+            try {
+                const res = await this.authFetch('/api/imap-pool/test', {
+                    method: 'POST',
+                    body: JSON.stringify({ id: row.id })
+                });
+                const data = await res.json();
+                this.showToast(data.message || '????', data.status === 'success' ? 'success' : 'error');
+                await this.fetchImapPool();
+            } catch (e) {
+                console.error('?? IMAP ????:', e);
+                this.showToast('?? IMAP ????', 'error');
+            } finally {
+                this.imapPoolTestingId = null;
+            }
+        },
+        async exportAllImapPool() {
+            try {
+                const res = await this.authFetch('/api/imap-pool/export_all', { method: 'POST' });
+                const data = await res.json();
+                if (data.status !== 'success') {
+                    this.showToast(data.message || '????', 'error');
+                    return;
+                }
+                const rows = this.normalizeImapPoolRows(Array.isArray(data.data) ? data.data : []);
+                if (rows.length === 0) {
+                    this.showToast('IMAP ?????????', 'warning');
+                    return;
+                }
+                const text = rows.map(row => `${row.email || ''}----${row.password || ''}----${row.imap_server || ''}----${row.imap_port || ''}`).join('\n');
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `imap_pool_${new Date().getTime()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                this.showToast(`???? ${rows.length} ? IMAP ??`, 'success');
+            } catch (e) {
+                console.error('?? IMAP ????:', e);
+                this.showToast('?? IMAP ????', 'error');
+            }
+        },
+        async clearAllImapPool() {
+            const confirmed = await this.customConfirm('??????????? IMAP ????');
+            if (!confirmed) return;
+            try {
+                const res = await this.authFetch('/api/imap-pool/clear_all', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.showToast(data.message || 'IMAP ?????', 'success');
+                    await this.fetchImapPool();
+                } else {
+                    this.showToast(data.message || '????', 'error');
+                }
+            } catch (e) {
+                console.error('?? IMAP ????:', e);
+                this.showToast('?? IMAP ????', 'error');
             }
         },
         openOutlookAuthModal(mailbox) {

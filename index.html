@@ -86,6 +86,9 @@
                 <button @click="handleLogin" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-3.5 px-4 rounded-xl text-sm md:text-base focus:outline-none shadow-lg shadow-indigo-500/30 transform active:scale-[0.98] transition-all">
                     安全登录
                 </button>
+                <button @click="toggleTheme" class="w-full mt-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-sm md:text-base border border-slate-200 transition-all active:scale-[0.98]">
+                    {{ isDarkMode ? '☀️ 日间模式' : '🌙 护眼模式' }}
+                </button>
                 <div class="text-center mt-6">
                     <span class="text-[11px] md:text-xs text-slate-400 font-mono tracking-widest font-semibold">{{ appVersion }}</span>
                 </div>
@@ -166,6 +169,10 @@
                         </div>
 
                         <div class="flex items-center justify-between md:justify-end gap-3 md:gap-4 w-full md:w-auto">
+                            <button @click="toggleTheme" class="px-3 py-1.5 md:px-5 md:py-2.5 rounded-xl font-bold text-xs md:text-sm border transition-all active:scale-95 shrink-0 bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-sm flex items-center justify-center">
+                                <span class="sm:hidden">{{ isDarkMode ? '☀️' : '🌙' }}</span>
+                                <span class="hidden sm:inline">{{ isDarkMode ? '☀️ 日间' : '🌙 护眼' }}</span>
+                            </button>
                             <span v-if="isRunning" class="flex items-center gap-2 text-emerald-600 text-[11px] md:text-sm font-bold bg-white px-3 md:px-4 py-1.5 rounded-full border border-slate-200 shadow-sm">
                                 <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> 运行中
                             </span>
@@ -630,92 +637,100 @@
                                                 <div v-show="currentTab === 'imap_pool'" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
                             <div v-if="showImportImapPoolModal" class="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
                                 <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl flex flex-col">
-                                    <h3 class="text-xl font-black text-slate-800 mb-4 flex items-center gap-2"><span>📨</span> 批量导入 IMAP 号池</h3>
-                                    <p class="text-xs text-slate-500 mb-3 font-bold bg-slate-50 p-2 rounded border border-slate-100">
-                                        支持格式（每行一个）：<br>
-                                        <code class="text-sky-600">邮箱----密码</code><br>
-                                        <code class="text-sky-600">邮箱----密码----IMAP服务器----端口</code>
+                                    <h3 class="text-xl font-black text-slate-800 mb-4 flex items-center gap-2"><span>??</span> ???? IMAP ??</h3>
+                                    <p class="text-xs text-slate-500 mb-3 font-bold bg-slate-50 p-3 rounded border border-slate-100 leading-6">
+                                        ???????????<br>
+                                        <code class="text-sky-600">??----??</code><br>
+                                        <code class="text-sky-600">??----??----IMAP???----??</code>
                                     </p>
-                                    <textarea v-model="importImapPoolText" class="w-full h-64 appearance-none bg-slate-50 border border-slate-200 text-slate-700 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono text-xs leading-relaxed placeholder:text-slate-300 mb-4" placeholder="例如：&#10;abc@gazeta.pl----pass123&#10;foo@example.com----pass456----mail.example.com----993"></textarea>
+                                    <textarea v-model="importImapPoolText" class="w-full h-64 appearance-none bg-slate-50 border border-slate-200 text-slate-700 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono text-xs leading-relaxed placeholder:text-slate-300 mb-4" placeholder="???&#10;abc@gazeta.pl----pass123&#10;foo@example.com----pass456----mail.example.com----993"></textarea>
                                     <div class="flex justify-end gap-3">
-                                        <button @click="showImportImapPoolModal = false" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">取消</button>
-                                        <button @click="submitImportImapPool" :disabled="isImportingImapPool" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md flex items-center gap-2 transition-all disabled:opacity-50">
-                                            <span v-if="isImportingImapPool" class="animate-spin">⏳</span>
-                                            确认导入
+                                        <button @click="showImportImapPoolModal = false" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">??</button>
+                                        <button @click="submitImportImapPool" :disabled="isImportingImapPool" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <span v-if="isImportingImapPool" class="animate-spin">?</span>
+                                            ????
                                         </button>
                                     </div>
                                 </div>
                             </div>
                             <div class="px-5 md:px-8 py-4 border-b border-slate-100 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-slate-50/50 min-h-[80px]">
                                 <div class="flex items-center gap-3">
-                                    <h2 class="text-xl md:text-2xl font-black text-slate-800 tracking-tight">通用 IMAP 号池</h2>
-                                    <button @click="fetchImapPool(true)" class="p-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 active:scale-95 transition-all shadow-sm" title="刷新列表">⏳</button>
+                                    <h2 class="text-xl md:text-2xl font-black text-slate-800 tracking-tight">?? IMAP ??</h2>
+                                    <button @click="fetchImapPool(true)" :disabled="imapPoolLoading" class="p-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 active:scale-95 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" title="????">?</button>
                                 </div>
                                 <div class="flex flex-wrap gap-3 items-center w-full xl:w-auto">
-                                    <input v-model="imapPoolFilters.keyword" @keyup.enter="fetchImapPool(true)" type="text" placeholder="搜索邮箱关键字" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm shadow-sm">
+                                    <input v-model="imapPoolFilters.keyword" @keyup.enter="fetchImapPool(true)" type="text" placeholder="???????" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm shadow-sm">
                                     <select v-model="imapPoolFilters.status" @change="fetchImapPool(true)" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm shadow-sm">
-                                        <option value="">全部状态</option>
+                                        <option value="">????</option>
                                         <option value="idle">idle</option>
                                         <option value="using">using</option>
                                         <option value="used">used</option>
                                         <option value="invalid">invalid</option>
                                         <option value="banned">banned</option>
                                     </select>
-                                    <button @click="showImportImapPoolModal = true" class="text-sm bg-sky-50 text-sky-600 border border-sky-200 px-3 py-1.5 rounded-lg hover:bg-sky-100 transition shadow-sm font-bold">导入</button>
-                                    <button @click="showImapPoolPlaintext = !showImapPoolPlaintext" class="text-sm bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition shadow-sm font-bold">{{ showImapPoolPlaintext ? '脱敏' : '明文' }}</button>
-                                    <button @click="exportAllImapPool" class="px-3 py-1.5 bg-slate-200/70 text-slate-600 text-sm font-bold rounded-lg hover:bg-slate-300 transition">导出全部</button>
-                                    <button @click="clearAllImapPool" class="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 text-sm font-bold rounded-lg hover:bg-rose-100 transition">清空库</button>
+                                    <button @click="fetchImapPool(true)" class="text-sm bg-white text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition shadow-sm font-bold">??</button>
+                                    <button @click="resetImapPoolFilters" class="text-sm bg-white text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition shadow-sm font-bold">??</button>
+                                    <button @click="showImportImapPoolModal = true" class="text-sm bg-sky-50 text-sky-600 border border-sky-200 px-3 py-1.5 rounded-lg hover:bg-sky-100 transition shadow-sm font-bold">??</button>
+                                    <button @click="showImapPoolPlaintext = !showImapPoolPlaintext" class="text-sm bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition shadow-sm font-bold">{{ showImapPoolPlaintext ? '??' : '??' }}</button>
+                                    <button @click="exportAllImapPool" class="px-3 py-1.5 bg-slate-200/70 text-slate-600 text-sm font-bold rounded-lg hover:bg-slate-300 transition">????</button>
+                                    <button @click="clearAllImapPool" class="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 text-sm font-bold rounded-lg hover:bg-rose-100 transition">????</button>
                                 </div>
                             </div>
                             <div class="px-5 md:px-8 py-3 border-b border-slate-100 bg-white flex flex-wrap gap-2" v-if="selectedImapPool.length > 0">
-                                <span class="text-xs font-black text-indigo-600 px-2 py-1 bg-indigo-50 rounded-lg border border-indigo-100">已选 {{ selectedImapPool.length }}</span>
-                                <button @click="setSelectedImapPoolStatus('idle')" class="px-3 py-1 bg-white text-emerald-600 rounded-lg text-xs font-bold shadow-sm border border-emerald-200">设为 idle</button>
-                                <button @click="setSelectedImapPoolStatus('invalid')" class="px-3 py-1 bg-white text-amber-600 rounded-lg text-xs font-bold shadow-sm border border-amber-200">设为 invalid</button>
-                                <button @click="setSelectedImapPoolStatus('banned')" class="px-3 py-1 bg-white text-rose-600 rounded-lg text-xs font-bold shadow-sm border border-rose-200">设为 banned</button>
-                                <button @click="deleteSelectedImapPool" class="px-3 py-1 bg-rose-500 text-white rounded-lg text-xs font-bold shadow-sm">删除选中</button>
+                                <span class="text-xs font-black text-indigo-600 px-2 py-1 bg-indigo-50 rounded-lg border border-indigo-100">?? {{ selectedImapPool.length }}</span>
+                                <button @click="setSelectedImapPoolStatus('idle')" class="px-3 py-1 bg-white text-emerald-600 rounded-lg text-xs font-bold shadow-sm border border-emerald-200">?? idle</button>
+                                <button @click="setSelectedImapPoolStatus('invalid')" class="px-3 py-1 bg-white text-amber-600 rounded-lg text-xs font-bold shadow-sm border border-amber-200">?? invalid</button>
+                                <button @click="setSelectedImapPoolStatus('banned')" class="px-3 py-1 bg-white text-rose-600 rounded-lg text-xs font-bold shadow-sm border border-rose-200">?? banned</button>
+                                <button @click="deleteSelectedImapPool" class="px-3 py-1 bg-rose-500 text-white rounded-lg text-xs font-bold shadow-sm">????</button>
                             </div>
-                            <div class="overflow-x-auto w-full min-h-[420px]">
+                            <div class="overflow-x-auto w-full min-h-[420px] relative">
+                                <div v-if="imapPoolLoading" class="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center z-10 text-sm font-bold text-slate-500">???? IMAP ??...</div>
                                 <table class="min-w-full divide-y divide-slate-100">
                                     <thead class="bg-slate-50/80">
                                         <tr>
                                             <th class="px-5 md:px-8 py-4 text-left w-12"><input type="checkbox" @change="toggleAllImapPool" :checked="selectedImapPool.length === imapPool.length && imapPool.length > 0" class="form-checkbox w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"></th>
-                                            <th class="px-5 md:px-8 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">邮箱</th>
+                                            <th class="px-5 md:px-8 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">??</th>
                                             <th class="px-5 md:px-8 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">Provider</th>
                                             <th class="px-5 md:px-8 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">IMAP</th>
-                                            <th class="px-5 md:px-8 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">状态</th>
-                                            <th class="px-5 md:px-8 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">最后错误</th>
-                                            <th class="px-5 md:px-8 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">最后使用</th>
-                                            <th class="px-5 md:px-8 py-4 text-center text-[11px] font-black text-slate-400 uppercase tracking-widest">操作</th>
+                                            <th class="px-5 md:px-8 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">??</th>
+                                            <th class="px-5 md:px-8 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">????</th>
+                                            <th class="px-5 md:px-8 py-4 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">????</th>
+                                            <th class="px-5 md:px-8 py-4 text-center text-[11px] font-black text-slate-400 uppercase tracking-widest">??</th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-slate-50">
-                                        <tr v-if="imapPool.length === 0"><td colspan="8" class="px-6 py-16 text-center text-slate-400 font-medium bg-slate-50/30">暂无 IMAP 号池数据</td></tr>
+                                        <tr v-if="!imapPoolLoading && imapPool.length === 0"><td colspan="8" class="px-6 py-16 text-center text-slate-400 font-medium bg-slate-50/30">?? IMAP ????</td></tr>
                                         <tr v-for="row in imapPool" :key="row.id" class="hover:bg-slate-50 transition duration-200">
                                             <td class="px-5 md:px-8 py-4 whitespace-nowrap"><input type="checkbox" :value="row" v-model="selectedImapPool" class="form-checkbox w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"></td>
                                             <td class="px-5 md:px-8 py-4 whitespace-nowrap text-sm font-bold text-slate-700">{{ showImapPoolPlaintext ? row.email : maskEmail(row.email) }}</td>
                                             <td class="px-5 md:px-8 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">{{ row.provider || '-' }}</td>
                                             <td class="px-5 md:px-8 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">{{ row.imap_server }}:{{ row.imap_port }}</td>
                                             <td class="px-5 md:px-8 py-4 whitespace-nowrap"><span class="px-2.5 py-1 text-[10px] font-black rounded-md border" :class="row.status === 'idle' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : row.status === 'using' ? 'bg-amber-50 text-amber-600 border-amber-200' : row.status === 'used' ? 'bg-blue-50 text-blue-600 border-blue-200' : row.status === 'invalid' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-rose-50 text-rose-600 border-rose-200'">{{ row.status }}</span></td>
-                                            <td class="px-5 md:px-8 py-4 text-xs text-slate-500 max-w-[260px] truncate">{{ row.last_error || '-' }}</td>
+                                            <td class="px-5 md:px-8 py-4 text-xs text-slate-500 max-w-[260px] truncate" :title="row.last_error || '-'">{{ row.last_error || '-' }}</td>
                                             <td class="px-5 md:px-8 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">{{ formatTime(row.last_used_at || row.updated_at) }}</td>
-                                            <td class="px-5 md:px-8 py-4 whitespace-nowrap text-center"><button @click="testImapPoolRow(row)" class="inline-flex items-center px-3 py-1.5 bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300 rounded-lg text-xs font-bold transition-colors shadow-sm active:scale-95">测试</button></td>
+                                            <td class="px-5 md:px-8 py-4 whitespace-nowrap text-center">
+                                                <button @click="testImapPoolRow(row)" :disabled="imapPoolTestingId === row.id" class="inline-flex items-center px-3 py-1.5 bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300 rounded-lg text-xs font-bold transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                    <span v-if="imapPoolTestingId === row.id">???...</span>
+                                                    <span v-else>??</span>
+                                                </button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             <div class="px-5 md:px-8 py-4 border-t border-slate-100 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4">
                                 <div class="text-sm text-slate-500 font-bold flex flex-wrap items-center gap-2">
-                                    <span>共 <span class="text-sky-600 text-base font-black">{{ totalImapPool }}</span> 个邮箱，</span>
-                                    <span>第 <span class="text-slate-800">{{ imapPoolPage }}</span>/{{ imapPoolTotalPages }} 页</span>
+                                    <span>? <span class="text-sky-600 text-base font-black">{{ totalImapPool }}</span> ????</span>
+                                    <span>? <span class="text-slate-800">{{ imapPoolPage }}</span>/{{ imapPoolTotalPages }} ?</span>
                                     <select v-model.number="imapPoolPageSize" @change="changeImapPoolPageSize" class="bg-white border border-slate-200 text-slate-700 py-1.5 px-3 rounded-xl shadow-sm focus:outline-none ml-2 font-bold">
-                                        <option :value="10">10 / 页</option>
-                                        <option :value="50">50 / 页</option>
-                                        <option :value="200">200 / 页</option>
+                                        <option :value="10">10 / ?</option>
+                                        <option :value="50">50 / ?</option>
+                                        <option :value="200">200 / ?</option>
                                     </select>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button @click="changeImapPoolPage(imapPoolPage - 1)" :disabled="imapPoolPage <= 1" class="px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">上一页</button>
-                                    <button @click="changeImapPoolPage(imapPoolPage + 1)" :disabled="imapPoolPage >= imapPoolTotalPages" class="px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">下一页</button>
+                                    <button @click="changeImapPoolPage(imapPoolPage - 1)" :disabled="imapPoolPage <= 1 || imapPoolLoading" class="px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">???</button>
+                                    <button @click="changeImapPoolPage(imapPoolPage + 1)" :disabled="imapPoolPage >= imapPoolTotalPages || imapPoolLoading" class="px-4 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">???</button>
                                 </div>
                             </div>
                         </div>
@@ -724,12 +739,13 @@
                             <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-200/60">
                                 <h3 class="text-lg md:text-xl font-black text-blue-600 mb-5 flex items-center gap-2 tracking-tight"><span>📧</span> 基础发信设置</h3>
                                 <label class="block text-slate-700 text-sm font-extrabold mb-2">API 模式选择 (email_api_mode)</label>
-                                <select v-model="config.email_api_mode" @change="if(!['freemail', 'imap', 'cloudmail', 'cloudflare_temp_email'].includes(config.email_api_mode)) config.enable_sub_domains = false;" class="w-full appearance-none bg-slate-50 border-2 border-slate-200 text-blue-700 font-black rounded-xl py-3 px-4 focus:outline-none focus:ring-0 focus:border-blue-500 transition-colors shadow-sm cursor-pointer pr-10 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%232563eb%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[right_14px_center] bg-no-repeat">
+                                <select v-model="config.email_api_mode" @change="if(!['freemail', 'imap', 'cloudmail', 'cloudflare_temp_email', 'Gmail_OAuth'].includes(config.email_api_mode)) config.enable_sub_domains = false;" class="w-full appearance-none bg-slate-50 border-2 border-slate-200 text-blue-700 font-black rounded-xl py-3 px-4 focus:outline-none focus:ring-0 focus:border-blue-500 transition-colors shadow-sm cursor-pointer pr-10 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%232563eb%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-[right_14px_center] bg-no-repeat">
                                     <option value="cloudflare_temp_email">cloudflare_temp_email (CF 临时邮箱)</option>
                                     <option value="imap">imap (直连收件箱)</option>
                                     <option value="icloud_hme">icloud_hme (苹果隐藏邮箱)</option>
                                     <option value="local_microsoft">本地微软邮箱库</option>
-                                    <option value="Gmail_OAuth">Gmail_OAuth</option>
+                                    <option value="gmail_fission">Gmail OAuth裂变</option>
+                                    <option value="Gmail_OAuth">Gmail_OAuth授权(cf转发gmail直接选此模式收件)</option>
                                     <option value="freemail">freemail</option>
                                     <option value="cloudmail">cloudmail</option>
                                     <option value="mail_curl">mail_curl</option>
@@ -797,12 +813,12 @@
                                             <h4 class="text-sm font-black text-blue-800 tracking-wide">多级域名泛解析模式</h4>
                                             <p class="text-xs text-slate-500 mt-1 font-medium">开启后将自动使用指定域名层级。</p>
                                             <p class="text-[11px] text-slate-400 mt-1">第一次使用请填写好上方发信域名池后点击下方推送按钮，如果加入新主域也要点推送，推送只需要一次永久生效</p>
-                                            <p v-if="!['freemail', 'imap', 'cloudflare_temp_email', 'cloudmail'].includes(config.email_api_mode)" class="text-[11px] font-bold text-rose-600 mt-3 bg-rose-50 px-3 py-2 rounded-lg inline-block border border-rose-100 shadow-sm flex items-center gap-1.5">
+                                            <p v-if="!['freemail', 'imap', 'cloudflare_temp_email', 'cloudmail', 'Gmail_OAuth'].includes(config.email_api_mode)" class="text-[11px] font-bold text-rose-600 mt-3 bg-rose-50 px-3 py-2 rounded-lg inline-block border border-rose-100 shadow-sm flex items-center gap-1.5">
                                                 <span>⚠️</span> 当前模式不支持此功能！仅限 cloudflare_temp_email, freemail, imap, cloudmail。
                                             </p>
                                         </div>
-                                        <label class="relative inline-flex items-center shrink-0 mt-3 sm:mt-0" :class="['freemail', 'imap', 'cloudflare_temp_email', 'cloudmail'].includes(config.email_api_mode) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50 grayscale'">
-                                            <input type="checkbox" v-model="config.enable_sub_domains" :disabled="!['freemail', 'imap', 'cloudflare_temp_email', 'cloudmail'].includes(config.email_api_mode)" class="sr-only peer">
+                                        <label class="relative inline-flex items-center shrink-0 mt-3 sm:mt-0" :class="['freemail', 'imap', 'cloudflare_temp_email', 'cloudmail', 'Gmail_OAuth'].includes(config.email_api_mode) ? 'cursor-pointer' : 'cursor-not-allowed opacity-50 grayscale'">
+                                            <input type="checkbox" v-model="config.enable_sub_domains" :disabled="!['freemail', 'imap', 'cloudflare_temp_email', 'cloudmail', 'Gmail_OAuth'].includes(config.email_api_mode)" class="sr-only peer">
                                             <div class="relative w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-blue-600 shadow-inner transition-colors duration-300"></div>
                                         </label>
                                     </div>
@@ -1122,6 +1138,52 @@
                                                 <button @click="showPwd.master_rt = !showPwd.master_rt" class="absolute right-3 top-1/2 -translate-y-1/2 text-lg text-slate-400 hover:text-indigo-600 transition-transform">
                                                     {{ showPwd.master_rt ? '👁️' : '🙈' }}
                                                 </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-if="config.email_api_mode === 'gmail_fission' && config.gmail_oauth_mode" class="animate-fade-in space-y-4">
+                                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center text-xl shadow-sm">G</div>
+                                            <div>
+                                                <h3 class="text-base font-bold text-slate-800">Gmail OAuth 裂变控制</h3>
+                                                <span class="text-[11px] text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded mt-1 inline-block border border-rose-100">⚠️ 必须先在左侧API模式选择 Gmail_OAuth 授权完毕后再回到此功能使用！</span>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" v-model="config.gmail_oauth_mode.fission_enable" @change="saveConfig" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+                                        </label>
+                                    </div>
+                                    <div class="p-6 space-y-6" v-if="config.gmail_oauth_mode.fission_enable">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div class="space-y-2">
+                                                <label class="text-sm font-bold text-slate-700 flex items-center gap-2">Gmail 主号 (Master)</label>
+                                                <input type="text" v-model="config.gmail_oauth_mode.master_email" @blur="saveConfig" placeholder="example@gmail.com" class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-2.5 px-4 focus:outline-none focus:border-red-400 transition-all text-sm">
+                                            </div>
+                                            <div class="space-y-2">
+                                                <label class="text-sm font-bold text-slate-700 flex items-center gap-2">别名模式</label>
+                                                <select v-model="config.gmail_oauth_mode.fission_mode" @change="saveConfig" class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-2.5 px-4 focus:outline-none focus:border-red-400 transition-all text-sm">
+                                                    <option value="suffix">后缀模式 (+alias)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div class="space-y-2">
+                                                <label class="text-sm font-bold text-slate-700">后缀生成模式</label>
+                                                <select v-model="config.gmail_oauth_mode.suffix_mode" @change="saveConfig" class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-2.5 px-4 focus:outline-none focus:border-red-400 transition-all text-sm">
+                                                    <option value="fixed">固定长度</option>
+                                                    <option value="range">随机区间</option>
+                                                </select>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <label class="text-sm font-bold text-slate-700">最小长度</label>
+                                                <input type="number" min="8" max="32" v-model.number="config.gmail_oauth_mode.suffix_len_min" @blur="saveConfig" class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-2.5 px-4 focus:outline-none focus:border-red-400 transition-all text-sm">
+                                            </div>
+                                            <div class="space-y-2">
+                                                <label class="text-sm font-bold text-slate-700">最大长度</label>
+                                                <input type="number" min="8" max="32" v-model.number="config.gmail_oauth_mode.suffix_len_max" @blur="saveConfig" class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl py-2.5 px-4 focus:outline-none focus:border-red-400 transition-all text-sm">
                                             </div>
                                         </div>
                                     </div>
@@ -1883,6 +1945,33 @@
                                 </div>
                             </div>
 
+
+                            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-200/60 border-l-4 border-l-cyan-500 bg-gradient-to-br from-cyan-50/40 to-white" v-if="config.raw_proxy_pool">
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-cyan-100 pb-5 gap-4">
+                                    <div>
+                                        <h3 class="text-xl md:text-2xl font-black text-cyan-700 tracking-tight flex items-center gap-2"><span>??</span> ?????</h3>
+                                        <p class="text-xs text-cyan-700/80 mt-2 font-medium">??? Clash ???????????????? `warp_proxy_list`?</p>
+                                    </div>
+                                    <label class="relative inline-flex bg-white px-4 py-2.5 md:px-5 md:py-3 rounded-xl cursor-pointer hover:bg-cyan-50 transition-colors shadow-sm border border-cyan-200 w-full sm:w-auto items-center justify-center group">
+                                        <input type="checkbox" v-model="config.raw_proxy_pool.enable" class="sr-only peer">
+                                        <div class="relative w-11 h-6 shrink-0 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-cyan-600 shadow-inner transition-colors duration-300 group-hover:shadow-md"></div>
+                                        <span class="font-black text-cyan-900 text-sm md:text-base ml-3 tracking-wide">???????</span>
+                                    </label>
+                                </div>
+                                <div class="space-y-4" :class="{'opacity-50 pointer-events-none grayscale-[50%] transition-opacity duration-300': !config.raw_proxy_pool.enable}">
+                                    <div class="bg-cyan-50/70 border border-cyan-200 rounded-2xl p-5 shadow-sm">
+                                        <label class="block text-cyan-800 text-xs font-black mb-2 flex items-center justify-between uppercase tracking-wider">
+                                            ????
+                                            <span class="text-[10px] font-bold text-cyan-500 bg-white px-2 py-0.5 rounded shadow-sm border border-cyan-100">????</span>
+                                        </label>
+                                        <p class="text-xs text-cyan-700/80 mb-3 leading-relaxed">
+                                            ?? `http://...`?`https://...`?`socks5://...`?`socks5h://...`????????? `socks5h://` ??
+                                        </p>
+                                        <textarea v-model="rawProxyListStr" class="w-full appearance-none bg-white border border-cyan-200 text-cyan-900 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-colors shadow-inner h-[160px] font-mono text-xs leading-relaxed placeholder:text-cyan-300" placeholder="1.2.3.4:1080&#10;user:pass@host:1080&#10;http://user:pass@host:8080"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div id="proxy-intelligence-pool" class="bg-white p-6 md:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-slate-200/60 border-l-4 border-l-indigo-500 bg-gradient-to-br from-indigo-50/30 to-white" v-if="config.clash_proxy_pool">
                                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 border-b border-indigo-100 pb-5 gap-4">
                                     <h3 class="text-xl md:text-2xl font-black text-indigo-700 tracking-tight flex items-center gap-2"><span>🌍</span> Clash 节点智能池</h3>
@@ -2090,6 +2179,17 @@
                                     <button @click="showCloudPlaintext = !showCloudPlaintext" class="text-xs md:text-sm bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl hover:bg-slate-50 active:scale-95 transition-all shadow-sm font-bold flex items-center gap-2">
                                         <span>{{ showCloudPlaintext ? '🙈' : '👁️' }}</span> {{ showCloudPlaintext ? '脱敏' : '明文' }}
                                     </button>
+                                    <div class="relative">
+                                        <select v-model="cloudStatusFilter" @change="changeCloudPageSize()" class="appearance-none bg-white border border-slate-200 text-slate-600 rounded-lg py-1.5 pl-3 pr-8 focus:outline-none focus:ring-0 focus:border-indigo-500 text-sm font-bold shadow-sm transition-colors cursor-pointer hover:bg-slate-50">
+                                            <option value="all">全部状态</option>
+                                            <option value="active">🟢 存活</option>
+                                            <option value="dead">🔴 失效</option>
+                                            <option value="disabled">⚪ 已禁用</option>
+                                        </select>
+                                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        </div>
+                                    </div>
                                     <button @click="fetchCloudAccounts" class="text-xs md:text-sm bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl hover:bg-slate-50 active:scale-95 transition-all shadow-sm font-bold flex items-center gap-2">
                                         <span class="text-base">🔄</span> 刷新
                                     </button>
